@@ -1,0 +1,22 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Node modules
+node_modules/
+
+# Build files
+dist/
+build/
+
+# Logs
+*.log
+
+# Python cache (if using Flask)
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+.env_venv/
