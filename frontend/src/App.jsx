@@ -21,11 +21,18 @@ import AdminHospitals from "./pages/AdminHospitals";
 import AdminBloodGroups from "./pages/AdminBloodGroups";
 import AdminDonations from "./pages/AdminDonations";
 import AdminStock from "./pages/AdminStock";
+import AdminIssues from "./pages/AdminIssues";
+
+// Donor Pages
+import DonorProfile from "./pages/DonorProfile";
+import MyDonations from "./pages/MyDonations";
+import BloodGroups from "./pages/BloodGroups";
 
 // Hospital Pages
 import SubmitRequest from "./pages/SubmitRequest";
 import MyRequests from "./pages/MyRequests";
 import BloodStock from "./pages/BloodStock";
+import HospitalIssues from "./pages/HospitalIssues";
 
 // Authentication
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -56,6 +63,7 @@ function App() {
           <Route path="blood-groups" element={<AdminBloodGroups />} />
           <Route path="donations" element={<AdminDonations />} />
           <Route path="stock" element={<AdminStock />} />
+          <Route path="issues" element={<AdminIssues />} />
         </Route>
 
         {/* Donor Routes */}
@@ -69,6 +77,9 @@ function App() {
         >
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DonorDashboard />} />
+          <Route path="profile" element={<DonorProfile />} />
+          <Route path="donations" element={<MyDonations />} />
+          <Route path="blood-groups" element={<BloodGroups />} />
         </Route>
 
         {/* Hospital Routes */}
@@ -85,6 +96,7 @@ function App() {
           <Route path="submit-request" element={<SubmitRequest />} />
           <Route path="requests" element={<MyRequests />} />
           <Route path="stock" element={<BloodStock />} />
+          <Route path="issues" element={<HospitalIssues />} />
         </Route>
 
         {/* Unknown Routes */}

@@ -50,7 +50,7 @@ function Sidebar({ role = "admin", collapsed, onToggleCollapse }) {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   const currentMenu = menuItems[role?.toLowerCase()] || menuItems.admin;
@@ -60,7 +60,7 @@ function Sidebar({ role = "admin", collapsed, onToggleCollapse }) {
       <div className="sidebar-header">
         <div className="sidebar-brand">
           <div className="brand-icon">
-            <Droplet size={23} />
+            <Droplet size={25} strokeWidth={2.5} />
           </div>
 
           {!collapsed && (
@@ -72,16 +72,25 @@ function Sidebar({ role = "admin", collapsed, onToggleCollapse }) {
         </div>
 
         <button
+          type="button"
           className="sidebar-toggle"
           onClick={onToggleCollapse}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          aria-expanded={!collapsed}
         >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {collapsed ? (
+            <ChevronRight size={19} />
+          ) : (
+            <ChevronLeft size={19} />
+          )}
         </button>
       </div>
 
       <div className="sidebar-menu">
-        {!collapsed && <p className="sidebar-section-label">MAIN MENU</p>}
+        {!collapsed && (
+          <p className="sidebar-section-label">MAIN MENU</p>
+        )}
 
         <nav>
           {currentMenu.map((item) => {
@@ -95,9 +104,9 @@ function Sidebar({ role = "admin", collapsed, onToggleCollapse }) {
                 className={({ isActive }) =>
                   `sidebar-link ${isActive ? "active" : ""}`
                 }
-                title={collapsed ? item.label : ""}
+                title={collapsed ? item.label : undefined}
               >
-                <Icon size={19} />
+                <Icon size={19} strokeWidth={2} />
                 {!collapsed && <span>{item.label}</span>}
               </NavLink>
             );
@@ -107,9 +116,10 @@ function Sidebar({ role = "admin", collapsed, onToggleCollapse }) {
 
       <div className="sidebar-footer">
         <button
+          type="button"
           className="sidebar-logout"
           onClick={handleLogout}
-          title={collapsed ? "Logout" : ""}
+          title={collapsed ? "Logout" : undefined}
         >
           <LogOut size={19} />
           {!collapsed && <span>Logout</span>}

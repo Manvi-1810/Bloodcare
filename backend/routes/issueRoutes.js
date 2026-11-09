@@ -8,6 +8,23 @@ const {
     authorizeRole
 } = require("../middleware/authMiddleware");
 
+// Helper: Create a notification
+const createNotification = (userId, requestId, title, message, type, callback) => {
+    const sql = `
+        INSERT INTO Notifications
+        (user_id, request_id, title, message, notification_type)
+        VALUES (?, ?, ?, ?, ?)
+    `;
+
+    db.query(
+        sql,
+        [userId, requestId, title, message, type],
+        (err) => {
+            if (callback) callback(err);
+        }
+    );
+};
+
 // Get all blood issues - Admin only
 router.get("/", verifyToken, authorizeRole("admin"), (req, res) => {
     const sql = `
@@ -105,9 +122,11 @@ router.post("/add", verifyToken, authorizeRole("admin"), (req, res) => {
             br.units_requested,
             br.status,
             br.blood_group_id,
+            h.user_id AS hospital_user_id,
             COALESCE(SUM(bi.units_issued), 0) AS already_issued,
             bs.units_available
         FROM Blood_Requests br
+        JOIN Hospitals h ON br.hospital_id = h.hospital_id
         LEFT JOIN Blood_Issues bi ON br.request_id = bi.request_id
         LEFT JOIN Blood_Stock bs ON br.blood_group_id = bs.blood_group_id
         WHERE br.request_id = ?
@@ -116,6 +135,7 @@ router.post("/add", verifyToken, authorizeRole("admin"), (req, res) => {
             br.units_requested,
             br.status,
             br.blood_group_id,
+            h.user_id,
             bs.units_available
     `;
 
@@ -129,8 +149,9 @@ router.post("/add", verifyToken, authorizeRole("admin"), (req, res) => {
         }
 
         const request = result[0];
+
         const remainingUnits =
-            request.units_requested - Number(request.already_issued);
+            Number(request.units_requested) - Number(request.already_issued);
 
         if (request.status !== "Approved") {
             return res.status(400).json({
@@ -146,7 +167,7 @@ router.post("/add", verifyToken, authorizeRole("admin"), (req, res) => {
 
         if (
             request.units_available === null ||
-            units_issued > request.units_available
+            units_issued > Number(request.units_available)
         ) {
             return res.status(400).json({
                 message: "Insufficient blood stock"
@@ -163,10 +184,107 @@ router.post("/add", verifyToken, authorizeRole("admin"), (req, res) => {
                     return res.status(500).json({ error: err.message });
                 }
 
-                res.status(201).json({
-                    message: "Blood issued successfully!",
-                    issue_id: insertResult.insertId
-                });
+                // Calculate total units issued for this request
+                db.query(
+                    `SELECT COALESCE(SUM(units_issued), 0) AS total_issued
+                     FROM Blood_Issues
+                     WHERE request_id = ?`,
+                    [request_id],
+                    (err, totalResult) => {
+                        if (err) {
+                            return res.status(500).json({ error: err.message });
+                        }
+
+                        const totalIssued = Number(totalResult[0].total_issued);
+                        console.log("DEBUG - Request ID:", request_id);
+console.log("DEBUG - Hospital User ID:", request.hospital_user_id);
+console.log("DEBUG - Units Requested:", request.units_requested);
+console.log("DEBUG - Total Issued:", totalIssued);
+console.log("DEBUG - Is Completed:", totalIssued >= Number(request.units_requested));
+                        const isCompleted =
+                            totalIssued >= Number(request.units_requested);
+
+                        const sendNotifications = () => {
+                            const issuedTitle = "Blood Issued";
+                            const issuedMessage =
+                                `${units_issued} unit(s) of blood have been issued ` +
+                                `for your request (#${request_id}).`;
+
+                            createNotification(
+                                request.hospital_user_id,
+                                request_id,
+                                issuedTitle,
+                                issuedMessage,
+                                "issued",
+                                (notificationError) => {
+                                    if (notificationError) {
+                                        console.error(
+                                            "Blood issued notification error:",
+                                            notificationError.message
+                                        );
+                                    }
+
+                                    if (isCompleted) {
+                                        createNotification(
+                                            request.hospital_user_id,
+                                            request_id,
+                                            "Blood Request Completed",
+                                            `Your blood request (#${request_id}) has been fully completed. ` +
+                                            `A total of ${totalIssued} unit(s) have been issued.`,
+                                            "completed",
+                                            (completionError) => {
+                                                if (completionError) {
+                                                    console.error(
+                                                        "Completion notification error:",
+                                                        completionError.message
+                                                    );
+                                                }
+
+                                                return res.status(201).json({
+                                                    message: "Blood issued successfully! Request completed.",
+                                                    issue_id: insertResult.insertId,
+                                                    total_issued: totalIssued,
+                                                    status: "Completed"
+                                                });
+                                            }
+                                        );
+                                    } else {
+                                        return res.status(201).json({
+                                            message: "Blood issued successfully!",
+                                            issue_id: insertResult.insertId,
+                                            total_issued: totalIssued,
+                                            remaining_units:
+                                                Number(request.units_requested) - totalIssued,
+                                            status: "Approved"
+                                        });
+                                    }
+                                }
+                            );
+                        };
+
+                        if (isCompleted) {
+                            // Automatically mark the request as Completed
+                            db.query(
+                                `UPDATE Blood_Requests
+                                 SET status = 'Completed'
+                                 WHERE request_id = ?`,
+                                [request_id],
+                                (err) => {
+                                    if (err) {
+                                        return res.status(500).json({
+                                            error: err.message,
+                                            message: "Blood was issued, but request status could not be updated."
+                                        });
+                                    }
+
+                                    sendNotifications();
+                                }
+                            );
+                        } else {
+                            sendNotifications();
+                        }
+                    }
+                );
             }
         );
     });

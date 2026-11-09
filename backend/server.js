@@ -1,3 +1,4 @@
+
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -29,6 +30,7 @@ const donationRoutes = require("./routes/donationRoutes");
 const stockRoutes = require("./routes/stockRoutes");
 const requestRoutes = require("./routes/requestRoutes");
 const issueRoutes = require("./routes/issueRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 // Register routes
 app.use("/api/auth", authRoutes);
@@ -39,6 +41,7 @@ app.use("/api/donations", donationRoutes);
 app.use("/api/stock", stockRoutes);
 app.use("/api/requests", requestRoutes);
 app.use("/api/issues", issueRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Root route
 app.get("/", (req, res) => {

@@ -13,11 +13,17 @@ function AdminHospitals() {
   const [hospitals, setHospitals] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchHospitals = async () => {
+  const fetchHospitals = async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
       setError("");
 
       const response = await API.get("/hospitals");
@@ -28,6 +34,7 @@ function AdminHospitals() {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -52,15 +59,22 @@ function AdminHospitals() {
 
   return (
     <div className="page-container admin-hospitals-page">
-      <div className="page-heading">
+      <div className="page-heading admin-hospitals-heading">
         <div>
           <h1>Hospital Management</h1>
           <p>View and manage registered hospitals.</p>
         </div>
 
-        <button className="btn-secondary" onClick={fetchHospitals}>
-          <RefreshCw size={16} />
-          Refresh
+        <button
+          className="admin-hospitals-refresh"
+          onClick={() => fetchHospitals(true)}
+          disabled={loading || refreshing}
+        >
+          <RefreshCw
+            size={16}
+            className={refreshing ? "refresh-spinning" : ""}
+          />
+          {refreshing ? "Refreshing..." : "Refresh"}
         </button>
       </div>
 
@@ -68,13 +82,14 @@ function AdminHospitals() {
         <div className="donor-summary-icon">
           <Building2 size={23} />
         </div>
+
         <div>
           <span>Total Registered Hospitals</span>
           <h2>{hospitals.length}</h2>
         </div>
       </div>
 
-      <div className="content-card">
+      <div className="content-card admin-hospitals-card">
         <div className="table-toolbar">
           <div>
             <h2>All Hospitals</h2>
@@ -118,6 +133,7 @@ function AdminHospitals() {
                 {filteredHospitals.map((hospital) => (
                   <tr key={hospital.hospital_id}>
                     <td>#{hospital.hospital_id}</td>
+
                     <td>
                       <div className="donor-name-cell">
                         <div className="donor-avatar hospital-avatar">
@@ -126,12 +142,14 @@ function AdminHospitals() {
                         <strong>{hospital.hospital_name}</strong>
                       </div>
                     </td>
+
                     <td>
                       <span className="donor-detail-cell">
                         <Phone size={14} />
                         {hospital.phone || "Not provided"}
                       </span>
                     </td>
+
                     <td>
                       <span className="donor-detail-cell">
                         <MapPin size={14} />
